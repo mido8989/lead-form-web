@@ -7,7 +7,10 @@ import org.springframework.web.client.RestClient;
 
 /** Sets up what the app needs to talk to Salesforce. */
 @Configuration
-@EnableConfigurationProperties(SalesforceProperties.class)
+@EnableConfigurationProperties({ SalesforceProperties.class, WebhookProperties.class })
+
+
+
 public class SalesforceConfig {
 
 	/** The HTTP client used to call Salesforce. Declared here so Spring can hand it to any class that asks. */

@@ -24,6 +24,15 @@
     #status { margin: 0; min-height: 1.25rem; font-size: .95rem; }
     #status.ok { color: var(--ok); }
     #status.bad { color: var(--bad); }
+    section.panel { margin-top: 2.5rem; }
+    section.panel h2 { margin: 0 0 .25rem; font-size: 1.25rem; }
+    section.panel p.note { margin: 0 0 1rem; color: var(--muted); font-size: .9rem; }
+    .table-wrap { background: #fff; border: 1px solid var(--line); border-radius: .75rem; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { text-align: left; padding: .6rem .9rem; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+    tbody tr:last-child td { border-bottom: 0; }
+    td.empty { color: var(--muted); text-align: center; padding: 1.25rem; }
   </style>
 </head>
 <body>
@@ -63,6 +72,22 @@
       <button type="submit">Submit</button>
       <p id="status" role="status" aria-live="polite"></p>
     </form>
+
+    <!-- Read-only: this section only displays data. It has no inputs and nothing here can be edited. -->
+    <section class="panel" aria-labelledby="accounts-title">
+      <h2 id="accounts-title">Latest accounts from Salesforce</h2>
+      <p class="note">Sent to this site by Salesforce when an account is created. Refreshes automatically.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Account</th><th>Industry</th><th>Created</th></tr>
+          </thead>
+          <tbody id="accounts-body">
+            <tr><td class="empty" colspan="3">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -107,6 +132,48 @@
         button.disabled = false;
       }
     });
+
+    // ----- Read-only accounts panel -----
+    const accountsBody = document.getElementById("accounts-body");
+
+    function messageRow(text) {
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.className = "empty";
+      cell.colSpan = 3;
+      cell.textContent = text;
+      row.appendChild(cell);
+      return row;
+    }
+
+    function accountRow(account) {
+      const row = document.createElement("tr");
+      const created = account.createdAt ? new Date(account.createdAt).toLocaleString() : "";
+      for (const value of [account.name, account.industry || "", created]) {
+        const cell = document.createElement("td");
+        // textContent shows the value as plain text, so nothing in the data can run as code.
+        cell.textContent = value;
+        row.appendChild(cell);
+      }
+      return row;
+    }
+
+    async function loadAccounts() {
+      try {
+        const response = await fetch("/api/accounts");
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const accounts = await response.json();
+        const rows = accounts.length
+          ? accounts.map(accountRow)
+          : [messageRow("No accounts received yet.")];
+        accountsBody.replaceChildren(...rows);
+      } catch (error) {
+        accountsBody.replaceChildren(messageRow("Could not load accounts."));
+      }
+    }
+
+    loadAccounts();
+    setInterval(loadAccounts, 30000);
   </script>
 </body>
 </html>
